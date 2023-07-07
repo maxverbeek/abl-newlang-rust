@@ -75,29 +75,23 @@ impl From<types::ForeingUser> for AppUser {
     }
 }
 
-async fn get_address(Path(addr_id): Path<i32>) -> Result<Json<AppUser>, GetAddressError> {
-    let response = reqwest::get(format!(
-        "https://jsonplaceholder.typicode.com/users/{addr_id}"
-    ))
-    .await?
-    // By default, HTTP errors are considered as a succesful request. this method converts
-    // non-200 responses to errors as well.
-    .error_for_status()
-    .map_err(|err| {
-        // Some basic error conversion: only convert a foreign 404 to our own 404. Any other
-        // error becomes 500 internal server error.
-        if err.status() == Some(StatusCode::NOT_FOUND) {
-            GetAddressError::UserNotFound
-        } else {
-            err.into()
-        }
-    })?
-    // Assume the response is a JSON object and parse it to our struct
-    .json::<types::ForeingUser>()
-    .await?;
+async fn get_address(Path(addr_id): Path<usize>) -> Result<Json<AppUser>, GetAddressError> {
+    let response = reqwest::get("https://jsonplaceholder.typicode.com/users")
+        .await?
+        // By default, HTTP errors are considered as a succesful request. this method converts
+        // non-200 responses to errors as well.
+        .error_for_status()?
+        // Assume the response is a JSON array and parse it to a vec of our struct
+        .json::<Vec<types::ForeingUser>>()
+        .await?;
 
-    // At this point, the type of the `response` variable is types::ForeingUser.
+    // At this point, the type of the `response` variable is Vec<types::ForeingUser> which is
+    // searchable.
+    let user = response
+        .into_iter()
+        .find(|u| u.id == addr_id)
+        .ok_or(GetAddressError::UserNotFound)?;
 
     // .into() knows what conversion to make because it's set in the return type of this function
-    Ok(axum::Json(response.into()))
+    Ok(axum::Json(user.into()))
 }
