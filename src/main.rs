@@ -11,7 +11,8 @@ async fn main() {
     // build our application with a two routes
     let app = Router::new()
         .route("/", get(hello_world))
-        .route("/address/:id", get(get_address));
+        .route("/address/:id", get(get_address))
+        .route("/testing", get(get_testing));
 
     // run it with hyper on localhost:3000
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
@@ -94,4 +95,8 @@ async fn get_address(Path(addr_id): Path<usize>) -> Result<Json<AppUser>, GetAdd
 
     // .into() knows what conversion to make because it's set in the return type of this function
     Ok(axum::Json(user.into()))
+}
+
+async fn get_testing() -> GetAddressError {
+    GetAddressError::UserNotFound
 }
